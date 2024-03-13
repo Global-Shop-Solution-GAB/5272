@@ -1,0 +1,160 @@
+﻿Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+f.Intrinsic.Control.Try
+	v.Local.i.Declare
+	v.Local.j.Declare(long)
+	v.Local.sEndofMnth.Declare
+	v.Local.s20ofMonth.Declare
+	v.Local.s30ofMonth.Declare
+	v.Local.sEndofMth1.Declare
+	v.Local.sEndofMth2.Declare
+	v.Local.sEndofMth3.Declare
+	v.Local.s45Mth.Declare
+	v.Local.sFileLoc.Declare
+	v.Local.sVals.Declare
+	v.Local.sSql.Declare
+	v.Local.sRet.Declare
+	v.Local.sInvoiceDate.Declare
+	v.Local.sDueDate.Declare
+	v.Local.dDateDue.Declare
+	v.Local.iMonth.Declare
+	v.Local.iYear.Declare
+	v.local.iDay.Declare
+	
+	'Grab data from XML file and set the codes to the rules
+	f.Intrinsic.String.Concat(v.Caller.GasDir,"\GAB_5272_AR_CONFIG.xml",v.local.sFileLoc)
+	f.Data.DataTable.CreateFromXML("dtAPCfg",v.Local.sFileLoc,true)
+	f.Intrinsic.Control.For(v.local.i,0,v.DataTable.dtAPCfg.RowCount--,1)
+		f.Intrinsic.String.Split(v.DataTable.dtAPCfg(v.Local.i).PayC!FIELDVALTRIM,"-",v.Local.sVals)
+		f.Intrinsic.Control.If(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"1")
+			V.Local.sEndofMnth.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.ElseIf(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"2")
+			V.Local.s20ofMonth.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.ElseIf(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"3")
+			V.Local.s30ofMonth.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.ElseIf(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"4")
+			V.Local.sEndofMth1.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.ElseIf(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"5")
+			V.Local.sEndofMth2.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.ElseIf(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"6")
+			V.Local.sEndofMth3.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.ElseIf(v.DataTable.dtAPCfg(v.Local.i).RULE!FIELDVALTRIM,=,"7")
+			V.Local.s45Mth.Set(v.Local.sVals(0).trim)
+		F.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.i)
+	
+	'Grab AR from the database
+	f.ODBC.Connection!con.OPENCOMPANYCONNECTION(90)
+	F.Intrinsic.Control.CallSub(CheckTable)
+	f.Intrinsic.String.Build("Select INVOICE, DATE_INVOICE, DATE_INVOICE_DUE, PAYMENT_TERMS AS 'TERMS_CODE' FROM V_AP_OPEN_ITEMS A LEFT JOIN V_VENDOR_PAY_TO B ON A.VENDOR=B.VENDOR WHERE BATCH_CODE=10 AND (PAYMENT_TERMS='{0}' or PAYMENT_TERMS='{1}' or PAYMENT_TERMS='{2}' or PAYMENT_TERMS='{3}' or PAYMENT_TERMS='{4}' or PAYMENT_TERMS='{5}' or PAYMENT_TERMS='{6}') ORDER BY INVOICE",V.Local.sEndofMnth,V.Local.s20ofMonth,V.Local.s30ofMonth,V.Local.sEndofMth1,V.Local.sEndofMth2,V.Local.sEndofMth3,V.Local.s45Mth,V.Local.SSQL)
+	F.Data.DataTable.CreateFromSQL("dtAP","con",v.Local.sSql,true)
+
+	f.Intrinsic.Control.For(v.Local.j,0,v.DataTable.dtAP.RowCount--,1)
+		f.Intrinsic.Control.If(v.DataTable.dtAP(v.Local.j).DATE_INVOICE!FIELDVALTRIM,<>,"")
+		
+			f.Intrinsic.Control.If(v.DataTable.dtAP(v.Local.j).TERMS_CODE!fieldvaltrim,=,v.Local.sEndofMth1)
+				'End of next month
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,20,V.Local.dDateDue)
+				F.Intrinsic.Date.DateAdd("M",1,v.Local.dDateDue,V.Local.dDateDue)
+				F.Intrinsic.Date.EndOfMonth(v.local.dDateDue,V.Local.dDateDue)
+			f.Intrinsic.Control.ElseIf(v.DataTable.dtAP(v.Local.j).TERMS_CODE!fieldvaltrim,=,v.Local.sEndofMth2)
+				'End of 2nd next month
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,20,V.Local.dDateDue)
+				F.Intrinsic.Date.DateAdd("M",2,v.Local.dDateDue,V.Local.dDateDue)
+				F.Intrinsic.Date.EndOfMonth(v.local.dDateDue,V.Local.dDateDue)
+			f.Intrinsic.Control.ElseIf(v.DataTable.dtAP(v.Local.j).TERMS_CODE!fieldvaltrim,=,v.Local.sEndofMth3)
+				'End of 3rd next month
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,20,V.Local.dDateDue)
+				F.Intrinsic.Date.DateAdd("M",3,v.Local.dDateDue,V.Local.dDateDue)
+				F.Intrinsic.Date.EndOfMonth(v.local.dDateDue,V.Local.dDateDue)
+			f.Intrinsic.Control.ElseIf(v.DataTable.dtAP(v.Local.j).TERMS_CODE!fieldvaltrim,=,v.Local.s20ofMonth)
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,20,V.Local.dDateDue)
+				F.Intrinsic.Date.DateAdd("M",1,v.Local.dDateDue,V.Local.dDateDue)
+			f.Intrinsic.Control.ElseIf(v.DataTable.dtAP(v.Local.j).TERMS_CODE!fieldvaltrim,=,v.Local.s30ofMonth)
+				'Calculate new due date the 30th of the following month
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,30,V.Local.dDateDue)
+				F.Intrinsic.Date.DateAdd("M",1,v.Local.dDateDue,V.Local.dDateDue)
+			
+			f.Intrinsic.Control.ElseIf(v.DataTable.dtAP(v.Local.j).TERMS_CODE!fieldvaltrim,=,v.Local.s45Mth)
+				'45 Month
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,15,V.Local.dDateDue)
+				F.Intrinsic.Date.DateAdd("M",2,v.Local.dDateDue,V.Local.dDateDue)
+			F.Intrinsic.Control.Else
+				F.Intrinsic.Date.Month(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iMonth)
+				F.Intrinsic.Date.Year(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,V.Local.iYear)
+				F.Intrinsic.Date.DateSerial(V.Local.iYear,V.Local.iMonth,15,V.Local.dDateDue)
+			F.Intrinsic.Control.Else
+				V.Local.dDateDue.Set(v.DataTable.dtAP(v.Local.j).DATE_INVOICE_DUE!Fieldval)
+			f.Intrinsic.Control.EndIf
+			
+		F.Intrinsic.Control.EndIf
+		
+		
+		'Update due date
+		F.Intrinsic.String.Format(V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldVal,"MMDDYY",V.Local.sInvoiceDate)
+		F.Intrinsic.String.Format(V.Local.dDateDue,"MMDDYY",V.Local.sDueDate)
+		F.Intrinsic.String.Build("update AP_OPEN_ITEMS set date_invoice_due = '{0}' where invoice = '{1}' and DATE_INVOICE = '{2}'",V.Local.sDueDate.Trim,V.DataTable.dtAP(V.Local.j).INVOICE!FieldValTrim,V.Local.sInvoiceDate.Trim,V.Local.sSql)
+		F.ODBC.Connection!con.Execute(V.Local.sSql)
+			
+		'Check if there is a record in GAB_5272_AR_DUE_DATE
+		F.Intrinsic.String.Build("select * from GAB_5272_AP_OITEMDT where invoice = '{0}' and date_invoice = '{1}'",V.DataTable.dtAP(V.Local.j).INVOICE!FieldValTrim,V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldValPervasiveDate,V.Local.sSql)
+		f.ODBC.Connection!con.executeandreturn(v.Local.sSql,v.Local.sret)
+		F.Intrinsic.Control.If(v.Local.sret.Trim,=,"")
+			F.Intrinsic.String.Build("insert into GAB_5272_AP_OITEMDT(invoice,date_invoice,date_due_original,date_due_new,terms_code) values('{0}','{1}','{2}','{3}','{4}');",V.DataTable.dtAP(V.Local.j).INVOICE!FieldValTrim,V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldValPervasiveDate,V.DataTable.dtAP(V.Local.j).date_invoice_due!FieldValPervasiveDate,V.Local.dDateDue.PervasiveDate,V.DataTable.dtAP(V.Local.j).TERMS_CODE!FieldVal,V.Local.sSql)
+			F.ODBC.Connection!con.Execute(V.Local.sSql)
+		f.Intrinsic.Control.Else
+			F.Intrinsic.String.Build("update GAB_5272_AP_OITEMDT set date_due_new='{3}' ,terms_code='{4}' where invoice='{0}' and date_invoice='{1}'",V.DataTable.dtAP(V.Local.j).INVOICE!FieldValTrim,V.DataTable.dtAP(V.Local.j).DATE_INVOICE!FieldValPervasiveDate,V.DataTable.dtAP(V.Local.j).DATE_INVOICE_DUE!FieldValPervasiveDate,V.Local.dDateDue.PervasiveDate,V.DataTable.dtAP(V.Local.j).TERMS_CODE!FieldVal,V.Local.sSql)
+			F.ODBC.Connection!con.Execute(V.Local.sSql)
+		F.Intrinsic.Control.EndIf
+	f.Intrinsic.Control.Next(v.Local.j)
+	
+	f.ODBC.Connection!con.Close
+	f.Intrinsic.Control.End
+f.Intrinsic.Control.Catch
+	f.Intrinsic.UI.Msgbox(v.Ambient.ErrorDescription)
+	f.ODBC.Connection!con.Close
+	f.Intrinsic.Control.End
+f.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.CheckTable.Start
+F.Intrinsic.Control.Try
+	V.Local.sError.Declare
+	
+	v.Local.bTable.Declare(Boolean)
+
+	F.ODBC.Connection!con.TableExists("GAB_5272_AP_OITEMDT",V.Local.bTable)
+	F.Intrinsic.Control.If(v.Local.bTable,=,False)
+		F.ODBC.Connection!Con.Execute("CREATE TABLE GAB_5272_AP_OITEMDT  (INVOICE CHAR(7), DATE_INVOICE DATE, DATE_DUE_ORIGINAL DATE, DATE_DUE_NEW DATE, TERMS_CODE CHAR(2)) ")
+	F.Intrinsic.Control.EndIf
+
+	F.ODBC.Connection!con.TableExists("GAB_5272_AR_OITEMDT",V.Local.bTable)
+	F.Intrinsic.Control.If(v.Local.bTable,=,False)
+		F.ODBC.Connection!Con.Execute("CREATE TABLE GAB_5272_AR_OITEMDT  (INVOICE CHAR(7), DATE_INVOICE DATE, DATE_DUE_ORIGINAL DATE, DATE_DUE_NEW DATE, TERMS_CODE CHAR(2)) ")
+	F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.Catch
+		F.Intrinsic.String.Build("Project: {0}{1}{1}Subroutine: {2}{1}Error Occurred {3} with description {4}{1}{1}GAB Version: {5}",V.Ambient.ScriptPath,V.Ambient.Newline,V.Ambient.CurrentSubroutine,V.Ambient.ErrorNumber,V.Ambient.ErrorDescription,V.Ambient.GABVersion,V.Local.sError)
+		F.Intrinsic.UI.Msgbox(V.Local.sError)
+		F.Intrinsic.Control.End 
+F.Intrinsic.Control.EndTry
+Program.Sub.CheckTable.End
+
+Program.Sub.Comments.Start
+${$5$}$2.0.0.0$}$2
+${$6$}$administrator$}$20220425133958511$}$ekloCF3xl04NqzG1qficpmAL8BPeM26OXK1Jt1fXVaWEdqOEyK/vGA/e+Z8TaAVJPG4RqEpkQlnSbrxmBd82yxnhjiH6vCuo
+Program.Sub.Comments.End
