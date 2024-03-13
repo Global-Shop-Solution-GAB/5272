@@ -1,0 +1,119 @@
+Program.Sub.ScreenSU.Start
+Gui.frmRuleSetup..Create
+Gui.frmRuleSetup..Caption("AR Rule Setup")
+Gui.frmRuleSetup..Size(16020,7035)
+Gui.frmRuleSetup..MinX(0)
+Gui.frmRuleSetup..MinY(0)
+Gui.frmRuleSetup..Position(0,0)
+Gui.frmRuleSetup..BackColor(-2147483633)
+Gui.frmRuleSetup..MousePointer(0)
+Gui.frmRuleSetup..Event(UnLoad,frmRuleSetup_UnLoad)
+Gui.frmRuleSetup.gsgcRules.Create(GsGridControl)
+Gui.frmRuleSetup.gsgcRules.Size(15525,5580)
+Gui.frmRuleSetup.gsgcRules.Position(150,690)
+Gui.frmRuleSetup.cmdSave.Create(Button)
+Gui.frmRuleSetup.cmdSave.Size(1365,375)
+Gui.frmRuleSetup.cmdSave.Position(165,195)
+Gui.frmRuleSetup.cmdSave.Caption("Save")
+Gui.frmRuleSetup.cmdSave.Event(Click,cmdSave_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+Program.Sub.Preflight.End
+
+Program.Sub.cmdSave_Click.Start
+f.Intrinsic.Control.Try
+	v.Local.sFileLocat.Declare(string)
+	f.Intrinsic.String.Concat(v.Caller.GasDir,"\GAB_5272_AR_CONFIG.xml",v.Local.sFileLocat)
+	f.Data.DataTable.SaveToXML("dt",0,true,v.Local.sfileLocat)
+	f.Intrinsic.UI.Msgbox("Successfully Updated.")
+f.Intrinsic.Control.Catch
+	f.Intrinsic.UI.Msgbox(v.Ambient.ErrorDescription)
+	f.Intrinsic.Control.CallSub(frmRuleSetup_UnLoad)
+f.Intrinsic.Control.EndTry
+Program.Sub.cmdSave_Click.End
+
+Program.Sub.Main.Start
+f.Intrinsic.Control.Try
+	'Open DB connection
+	f.ODBC.Connection!con.openconnection(v.Ambient.PDSN,v.Ambient.PUser,v.Ambient.PPass)
+	
+	'Pull in AR Terms
+	v.Local.sARTm.Declare
+	v.Local.i.Declare(long)
+	f.Data.DataTable.CreateFromSQL("dtARTM","con","select concat(TERMS_CODE,concat('- ',TERMS_MESSAGE)) as 'Term' from V_AR_TERMS")
+	f.Intrinsic.Control.For(v.Local.i,0,v.DataTable.dtARTM.RowCount--,1)
+		f.Intrinsic.String.Concat(v.Local.sARTm,v.DataTable.dtARTM(v.local.i).TERM!FIELDVALTRIM,"*!*",V.Local.sARTm)
+	f.Intrinsic.Control.Next(v.local.i)
+	
+	'Pull in AP Terms
+	v.Local.sAPTm.Declare
+	f.Data.DataTable.CreateFromSQL("dtAPTM","con","select concat(TERMS_CODE,concat('- ',TERMS_MESSAGE)) as 'Term' from V_AP_TERMS")
+	f.Intrinsic.Control.For(v.Local.i,0,v.DataTable.dtAPTM.RowCount--,1)
+		f.Intrinsic.String.Concat(v.Local.sAPTm,v.DataTable.dtAPTM(v.local.i).TERM!FIELDVALTRIM,"*!*",V.Local.sAPTm)
+	f.Intrinsic.Control.Next(v.local.i)
+	
+	'Check if the file exists
+	v.Local.bFileCheck.Declare
+	v.Local.sFileLocat.Declare
+	f.Intrinsic.String.Concat(v.Caller.GasDir,"\GAB_5272_AR_CONFIG.xml",v.Local.sFileLocat)
+	f.Intrinsic.File.Exists(v.Local.sFileLocat,v.Local.bFileCheck)
+	f.Intrinsic.Control.If(v.Local.bFileCheck)
+		f.Data.DataTable.CreateFromXML("dt",v.Local.sFileLocat,true)
+	f.Intrinsic.Control.Else
+		f.Data.DataTable.Create("dt",true)
+		f.Data.DataTable.AddColumn("dt","Code","String")
+		f.Data.DataTable.AddColumn("dt","PayC","String")
+		f.Data.DataTable.AddColumn("dt","Rule","String")
+		f.Data.DataTable.AddColumn("dt","Desc","String")
+		f.Data.DataTable.AddColumn("dt","Exam","String")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","1","Desc","End of this Month","Exam","Invoice date is 23/08/2018; the due date will be 31/08/2018")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","2","Desc","20th of Next Month","Exam","Invoice date is 23/08/2018; the due date will be 20/09/2018")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","3","Desc","30th of Next Month","Exam","Invoice date is 23/08/2018; the due date will be 30/09/2018")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","4","Desc","End of Next Month","Exam","Invoice date is 23/08/2018; the due date will be 30/09/2018")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","5","Desc","End of 2nd Month","Exam","Invoice date is 23/08/2018; the due date will be 31/10/2018")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","6","Desc","End of 3rd Month","Exam","Invoice date is 23/08/2018; the due date will be 30/11/2018")
+		f.Data.DataTable.AddRow("dt","Code","","Rule","7","Desc","45 Month","Exam","Invoice date is 23/08/2018; the due date will be 15/10/2018")
+	f.Intrinsic.Control.EndIf
+	
+	'Set Column Properties
+	gui.frmRuleSetup.gsgcRules.DataSource("dt")
+	gui.frmRuleSetup.gsgcRules.AddGridviewFromDatatable("gv","dt")
+	gui.frmRuleSetup.gsgcRules.anchor(15)
+	gui.frmRuleSetup.gsgcRules.ColumnEdit("gv","Code","DropDownList",v.Local.sARTm)
+	gui.frmRuleSetup.gsgcRules.ColumnEdit("gv","PayC","DropDownList",v.Local.sAPTm)
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Code","ReadOnly","False")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Code","AllowEdit","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","PayC","ReadOnly","False")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","PayC","AllowEdit","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Rule","ReadOnly","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Rule","AllowEdit","False")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Desc","ReadOnly","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Desc","AllowEdit","False")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Exam","ReadOnly","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Exam","AllowEdit","False")
+	'Set Width
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Exam","Width","300")
+	'Set Bold
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Code","HeaderFontBold","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Rule","HeaderFontBold","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Desc","HeaderFontBold","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Exam","HeaderFontBold","True")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","PayC","HeaderFontBold","True")
+	'Set Caption
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Code","Caption","AR Code")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","PayC","Caption","AP Code")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Desc","Caption","Description")
+	gui.frmRuleSetup.gsgcRules.SetColumnProperty("gv","Exam","Caption","Example")
+	
+	gui.frmRuleSetup..Show
+f.Intrinsic.Control.Catch
+	f.Intrinsic.UI.Msgbox(v.Ambient.ErrorDescription)
+	f.Intrinsic.Control.CallSub(frmRuleSetup_UnLoad)
+f.Intrinsic.Control.EndTry
+Program.Sub.Main.End
+
+Program.Sub.frmRuleSetup_UnLoad.Start
+f.ODBC.Connection!con.Close
+F.Intrinsic.Control.End
+Program.Sub.frmRuleSetup_UnLoad.End
